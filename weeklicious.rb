@@ -3,7 +3,6 @@ require 'httparty'
 require 'chronic'
 require 'pp'
 require 'erb'
-require 'fileutils'
 
 class Weeklicious
   include HTTParty
@@ -22,32 +21,22 @@ class Weeklicious
   def this_week
     today = Time.now.strftime("%y-%m-%d")
     last_week = Chronic.parse('7 days ago').strftime("%y-%m-%d")
-    posts(:query => {:fromdt => last_week, :todt => today})
+    self.class.get('/posts/all',:query => {:fromdt => last_week, :todt => today})
   end
 
 end
 
 weeklicious = Weeklicious.new
-posts_this_week = weeklicious.this_week
+week_links =  weeklicious.this_week
 
-template = %{
-  <html>
-    <head<title>Delicious links from <%= Time.now.strftime("%m %d, %Y") %> to <%= Chronic.parse("7 days ago").strftime("%m %d, %Y") %> | Joseph Hsu</title>
-    </head>
-    <body>
-      <ul>
-    <% posts_this_week['posts']['post'].each do |post| -%>
-        <li><%=h post['description'] %></li> 
-    <% end -%>
-      </ul>
-    </body>
-  </html>
-}
+  template = %q{
+    <h2><a href="http://delicious.com/jhsu" title="delicious/jhsu">jhsu</a>'s Weekly Delicious Links</h2>
+    <ul>
+      <% week_links['posts']['post'].each do |post| %>
+        <li><a href="<%= post['href'] %>" title="<%= post['description'] %>"><%= post['description'] %></a></li>
+      <% end %>
+    </ul>
+  }
 
-html = 'index.html'
-FileUtils.rm(html)
-#touch(html)
-
-#File.open(hmtl, 'w')
-
-#rhtml = ERB.new(template)
+rhtml = ERB.new(template).result
+File.open('index.html', 'w') {|f| f.write(rhtml) }
